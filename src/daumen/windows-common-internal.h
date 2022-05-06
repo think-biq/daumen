@@ -31,6 +31,8 @@ enum InfoHeaderType {
 	IHT_BITMAPV5HEADER = sizeof(BITMAPV5HEADER)
 };
 
+InfoHeaderType GetHeaderTypeFromSize(uint64_t HeaderSize);
+
 struct DaumenBitmap {
 	BITMAPFILEHEADER FileHeader;
 	InfoHeaderType InfoHeaderType;

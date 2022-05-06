@@ -50,7 +50,9 @@ int PerpareDaumenForExternalUse(DaumenExportData* ExportData, const DaumenBitmap
 		InfoHeaderDataHead = CharPtr(Daumen->InfoHeader.BitmapV5);
 		break;
 	default:
+	case (InfoHeaderType::IHT_INVALID):
 		assert(false && "Unknown header type!");
+		return 0;
 	}
 	memcpy(ExportRawFileDataHead, InfoHeaderDataHead, InfoHeaderSize);
 	ExportRawFileDataHead += InfoHeaderSize;

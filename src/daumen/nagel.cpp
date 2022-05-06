@@ -16,70 +16,58 @@ int ExportThumbnailFromFile(DaumenBitmap* Thumbnail, const char* FilePath, const
 	_bstr_t ItemFilePath(FilePath);
 	int AllMessedUp = 1;
 	HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-	if (SUCCEEDED(hr))
-	{
+	if (SUCCEEDED(hr)) {
 		IShellItem* psi;
 		hr = SHCreateItemFromParsingName(ItemFilePath, NULL, IID_PPV_ARGS(&psi));
-		if (SUCCEEDED(hr))
-		{
+		if (SUCCEEDED(hr)) {
 			IThumbnailProvider* pThumbProvider;
 			hr = psi->BindToHandler(NULL, BHID_ThumbnailHandler, IID_PPV_ARGS(&pThumbProvider));
-			if (SUCCEEDED(hr))
-			{
+			if (SUCCEEDED(hr)) {
 				// Thumbnail to create
 				HBITMAP g_hThumbnail;
 				WTS_ALPHATYPE wtsAlpha;
 				hr = pThumbProvider->GetThumbnail(Resolution, &g_hThumbnail, &wtsAlpha);
-				if (SUCCEEDED(hr))
-				{
+				if (SUCCEEDED(hr)) {
 					DIBSECTION ds; ZeroStructure(ds);
 					const int SectionTypeSize = sizeof(ds);
 					const int BitmapTypeSize = sizeof(ds.dsBm);
 
 					int nSizeDS;
 					// hBitmap is a DIB
-					if (SectionTypeSize == (nSizeDS = ::GetObject(g_hThumbnail, SectionTypeSize, &ds)))
-					{
+					if (SectionTypeSize == (nSizeDS = ::GetObject(g_hThumbnail, SectionTypeSize, &ds))) {
 					}
-					else if (BitmapTypeSize == (nSizeDS = ::GetObject(g_hThumbnail, BitmapTypeSize, &(ds.dsBm))))
-					{
+					else if (BitmapTypeSize == (nSizeDS = ::GetObject(g_hThumbnail, BitmapTypeSize, &(ds.dsBm)))) {
 						ZeroStructure(ds.dsBmih);
 						ZeroStructure(ds.dsBitfields);
 						ZeroStructure(ds.dshSection);
 						ZeroStructure(ds.dsOffset);
 					}
-					else
-					{
+					else {
 						assert("SOMETHING IS FISHY HERE!");
 					}
+					assert(nullptr != ds.dsBm.bmBits && "Could not read bitmap image data!");
 
 					// This should not be necessary.
 					// But many MSDN examples perform these calculations.
-					if (0 == ds.dsBmih.biSizeImage)
-					{
-						if (0 == ds.dsBm.bmWidthBytes) {
-							ds.dsBm.bmWidthBytes = ((ds.dsBm.bmWidth * ds.dsBm.bmBitsPixel + 31) & ~31);
-							ds.dsBm.bmWidthBytes /= 8;
-						}
+					if (0 == ds.dsBm.bmWidthBytes) {
+						ds.dsBm.bmWidthBytes = ((ds.dsBm.bmWidth * ds.dsBm.bmBitsPixel + 31) & ~31);
+						ds.dsBm.bmWidthBytes /= 8;
+					}
+					if (0 == ds.dsBmih.biSizeImage) {
 						ds.dsBmih.biSizeImage = ds.dsBm.bmHeight * ds.dsBm.bmWidthBytes;
 					}
 					// Image data at ds.dsBm.bmBits
 					// Data size in ds.dsBmih.biSizeImage
 
-					assert(nullptr != ds.dsBm.bmBits);
-					printf("Woot?! %i\n", *(int*)ds.dsBm.bmBits);
-
 					ZeroStructure(Thumbnail->FileHeader);
-					Thumbnail->FileHeader.bfType = 0x4D42;
+					Thumbnail->FileHeader.bfType = 0x4D42; // Bitmap magic constant.
 					Thumbnail->InfoHeaderType = (InfoHeaderType)sizeof(ds.dsBmih);
 
 					ZeroStructure(Thumbnail->InfoHeader);
-					if (SectionTypeSize == nSizeDS)
-					{
+					if (SectionTypeSize == nSizeDS) {
 						CopyStructure(Thumbnail->InfoHeader.BitmapInfo, ds.dsBmih);
 					}
-					else
-					{
+					else {
 						Thumbnail->InfoHeader.BitmapInfo.biSize = sizeof(Thumbnail->InfoHeader.BitmapInfo);
 						Thumbnail->InfoHeader.BitmapInfo.biWidth = ds.dsBm.bmWidth;
 						Thumbnail->InfoHeader.BitmapInfo.biHeight = ds.dsBm.bmHeight;

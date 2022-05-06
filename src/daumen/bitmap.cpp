@@ -17,10 +17,13 @@ int ReadDaumenBitmap(DaumenBitmap* Thumbnail, const char* FilePath) {
 		return 0;
 	}
 
-	char* FileHeaderData = CharPtr(Thumbnail->FileHeader);
-	DWORD At = 0;
+	ZeroStructure(Thumbnail);
+
 	if (FILE* ThumbnailFile = fopen(FilePath, "rb")) {
-		fread(FileHeaderData, sizeof(Thumbnail->FileHeader), 1, ThumbnailFile);
+		char* FileHeaderHead = CharPtr(Thumbnail->FileHeader);
+		size_t FileHeaderSize = sizeof(Thumbnail->FileHeader);
+		fread(FileHeaderHead, FileHeaderSize, 1, ThumbnailFile);
+
 		DWORD RemainingHeaderSize = Thumbnail->FileHeader.bfOffBits - ftell(ThumbnailFile);
 		switch (RemainingHeaderSize) {
 		case (InfoHeaderType::IHT_BITMAPCOREHEADER):
@@ -40,20 +43,21 @@ int ReadDaumenBitmap(DaumenBitmap* Thumbnail, const char* FilePath) {
 			fread(CharPtr(Thumbnail->InfoHeader.BitmapV5), InfoHeaderType::IHT_BITMAPV5HEADER, 1, ThumbnailFile);
 			break;
 		default:
+		case (InfoHeaderType::IHT_INVALID):
 			assert(false && "Unknown header type!");
+			return 0;
 		}
 
 		DWORD ImageSize = Thumbnail->FileHeader.bfSize - Thumbnail->FileHeader.bfOffBits;
-		char* ImageData = (char*)malloc(ImageSize);
-		assert(ImageData && "BULLSHIT!");
-		for (DWORD ByteIndex = 0; ByteIndex < ImageSize; ++ByteIndex) {
-			fread(ImageData + ByteIndex, 1, 1, ThumbnailFile);
+		Thumbnail->Bitmap.bmBits = malloc(ImageSize);
+		if (char* ImageDataHead = (char*)Thumbnail->Bitmap.bmBits) {
+			assert(ImageDataHead && "Could not allocated image data!");
+			for (DWORD ByteIndex = 0; ByteIndex < ImageSize; ++ByteIndex) {
+				fread(ImageDataHead + ByteIndex, 1, 1, ThumbnailFile);
+			}
 		}
 
 		fclose(ThumbnailFile);
-
-		ZeroStructure(Thumbnail->Bitmap);
-		Thumbnail->Bitmap.bmBits = (LPVOID)ImageData;
 	}
 
 	return 1;
@@ -75,7 +79,6 @@ int WriteDaumenBitmap(const char* FilePath, const DaumenBitmap* Thumbnail) {
 	const DWORD FileSize = HeaderSize + ImageSize;
 	assert(FileSize == Thumbnail->FileHeader.bfSize && "Sizes are all messed up :/");
 
-	DWORD At = 0;
 	if (FILE* BitmapFilePtr = fopen(FilePath, "wb"))
 	{
 		fwrite(CharPtr(Thumbnail->FileHeader), sizeof(Thumbnail->FileHeader), 1, BitmapFilePtr);
@@ -93,15 +96,19 @@ int WriteDaumenBitmap(const char* FilePath, const DaumenBitmap* Thumbnail) {
 			fwrite(CharPtr(Thumbnail->InfoHeader.BitmapV5), InfoHeaderType::IHT_BITMAPV5HEADER, 1, BitmapFilePtr);
 			break;
 		default:
+		case (InfoHeaderType::IHT_INVALID):
 			assert(false && "Unknown header type!");
+			return 0;
 		}
+
+		DWORD At = 0;
 		assert((At = ftell(BitmapFilePtr)) == HeaderSize);
 
 		char* RawData = (char*)Thumbnail->Bitmap.bmBits;
 		for (DWORD ByteIndex = 0; ByteIndex < ImageSize; ++ByteIndex) {
 			char Value = RawData[ByteIndex];
-			char* ByteData = RawData + ByteIndex;
-			fwrite(ByteData, 1, 1, BitmapFilePtr);
+			char* RawDataHead = RawData + ByteIndex;
+			fwrite(RawDataHead, 1, 1, BitmapFilePtr);
 		}
 		assert((At = ftell(BitmapFilePtr)) == FileSize);
 
