@@ -24,11 +24,47 @@ int PerpareDaumenForExternalUse(DaumenExportData* ExportData, const DaumenBitmap
 		return 0;
 	}
 	
-	ExportData->RawFileData = (uint8_t*)malloc(ExportData->ImageDataSize);
+	ExportData->RawFileData = (uint8_t*)malloc(ExportData->FileSize);
 	if (nullptr == ExportData->RawFileData) {
 		return 0;
 	}
-	memcpy(ExportData->RawFileData, Daumen->Bitmap.bmBits, ExportData->ImageDataSize);
 
+	char* ExportRawFileDataHead = (char*)ExportData->RawFileData;
+	char* FileHeaderDataHead = CharPtr(Daumen->FileHeader);
+	memcpy(ExportRawFileDataHead, FileHeaderDataHead, sizeof(Daumen->FileHeader));
+	ExportRawFileDataHead += sizeof(Daumen->FileHeader);
+
+	size_t InfoHeaderSize = (size_t)Daumen->InfoHeaderType;
+	char* InfoHeaderDataHead = nullptr;
+	switch (Daumen->InfoHeaderType) {
+	case (InfoHeaderType::IHT_BITMAPCOREHEADER):
+		InfoHeaderDataHead = CharPtr(Daumen->InfoHeader.BitmapCore);
+		break;
+	case (InfoHeaderType::IHT_BITMAPINFOHEADER):
+		InfoHeaderDataHead = CharPtr(Daumen->InfoHeader.BitmapInfo);
+		break;
+	case (InfoHeaderType::IHT_BITMAPV4HEADER):
+		InfoHeaderDataHead = CharPtr(Daumen->InfoHeader.BitmapV4);
+		break;
+	case (InfoHeaderType::IHT_BITMAPV5HEADER):
+		InfoHeaderDataHead = CharPtr(Daumen->InfoHeader.BitmapV5);
+		break;
+	default:
+		assert(false && "Unknown header type!");
+	}
+	memcpy(ExportRawFileDataHead, InfoHeaderDataHead, InfoHeaderSize);
+	ExportRawFileDataHead += InfoHeaderSize;
+
+	memcpy(ExportRawFileDataHead, Daumen->Bitmap.bmBits, ExportData->ImageDataSize);
+
+	return 1;
+}
+
+int DiscardDaumenExport(DaumenExportData* ExportData) {
+	if (nullptr == ExportData) {
+		return 0;
+	}
+
+	free(ExportData->RawFileData);
 	return 1;
 }

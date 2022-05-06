@@ -16,4 +16,6 @@ struct DaumenExportData {
 
 int PerpareDaumenForExternalUse(DaumenExportData* ExportData, const DaumenBitmap* Daumen);
 
+int DiscardDaumenExport(DaumenExportData* ExportData);
+
 #endif

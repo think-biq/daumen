@@ -30,7 +30,7 @@ void FreeDaumen(DaumenBitmap* Daumen) {
 		if (nullptr != Daumen->Bitmap.bmBits) {
 			FreeDaumenBitmap(&(Daumen->Bitmap), Daumen->bBitmapIsObject);
 		}
-		ZeroMemory(&(Daumen), sizeof(*Daumen));
+		ZeroMemory(Daumen, sizeof(*Daumen));
 	}
 }
 

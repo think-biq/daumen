@@ -11,6 +11,7 @@
 #include <shlobj.h>
 #include <thumbcache.h>
 #include <comdef.h>
+#include <stdint.h>
 
 #define CharPtr(Var) ((char*)&(Var))
 #define UCharPtr(Var) ((unsigned char*)&(Var))
