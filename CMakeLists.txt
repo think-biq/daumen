@@ -59,26 +59,49 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     endif()
 endif()
 
-if(NOT WIN32)
-message(FATAL_ERROR "Currently no other platform supported than windows!")
-endif()
-
-file(GLOB_RECURSE daumen_SRC
-    ${PROJECT_SOURCE_DIR}/src/daumen/*.cpp
+# Shared code library.
+file(GLOB daumen_COMMON_SRC
+    ${PROJECT_SOURCE_DIR}/src/daumen/*.c
 )
 if(BUILD_SHARED_LIBS)
-add_library(daumen SHARED ${daumen_SRC})
+add_library(daumen-common SHARED ${daumen_SRC})
 else()
-add_library(daumen ${daumen_SRC})
+add_library(daumen-common ${daumen_SRC})
 endif()
-target_include_directories(daumen PUBLIC
+target_include_directories(daumen-common PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/inc/>
+)
+set_property(TARGET daumen-common PROPERTY C_STANDARD 11)
+
+# Platform depending library.
+if (WIN32)
+    file(GLOB_RECURSE daumen_PLATFORM_SRC
+        ${DAUMEN_PLATFORM_SRC}/src/daumen/win/*.c
+    )
+    message (STATUS "Adding windows platform source at: ${RAUM_PLATFORM_SRC}")
+elseif (UNIX)
+    message(FATAL_ERROR "MacOs currently no supported!")
+
+    #file(GLOB_RECURSE RAUM_PLATFORM_SRC
+    #    ${PROJECT_SOURCE_DIR}/src/raum/nix/*.c
+    #)
+    #message (STATUS "Adding *nix platform source at: ${RAUM_PLATFORM_SRC}")
+else ()
+    message (FATAL_ERROR "Cannot identify OS!")
+endif ()
+if(BUILD_SHARED_LIBS)
+add_library(daumen-platform SHARED ${daumen_PLATFORM_SRC})
+else()
+add_library(daumen-platform ${daumen_PLATFORM_SRC})
+endif()
+target_include_directories(daumen-platform PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/inc/>
 )
 if(WIN32)
 find_library(SHLWAPI Shlwapi.lib)
 find_library(OLEAUT32 oleaut32.lib)
-target_link_libraries(daumen SHLWAPI OLEAUT32)
+target_link_libraries(daumen-platform SHLWAPI OLEAUT32)
+set_property(TARGET daumen-platform PROPERTY CXX_STANDARD 11)
 else()
 #
 endif()
-set_property(TARGET daumen PROPERTY CXX_STANDARD 11)
